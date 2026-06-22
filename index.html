@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestore Menu QR Code</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f4f6f9; color: #333; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; box-sizing: border-box; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); max-width: 450px; width: 100%; box-sizing: border-box; text-align: center; }
+        h1 { font-size: 22px; color: #2c3e50; margin-top: 0; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #e67e22; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        button { background: #e67e22; color: white; border: none; padding: 12px; width: 100%; cursor: pointer; font-size: 16px; border-radius: 6px; font-weight: bold; margin-top: 15px; }
+        #qrcode { display: inline-block; margin-top: 20px; padding: 10px; background: white; border: 1px solid #ddd; }
+        ol { text-align: left; font-size: 14px; line-height: 1.5; color: #555; }
+    </style>
+</head>
+<body>
+
+<div id="vista-cliente" class="card">
+    <h1>Caricamento Menu...</h1>
+    <div class="loader"></div>
+    <p style="font-size: 14px; color: #777;">Ti stiamo trasferendo al menu aggiornato.</p>
+</div>
+
+<div id="vista-admin" class="card" style="display: none;">
+    <h1>Il tuo QR Code Dinamico</h1>
+    <p style="font-size: 14px; color: #555;">Questo QR Code rimarrà sempre lo stesso. Stampalo e mettilo sui tavoli.</p>
+    
+    <div id="qrcode"></div>
+    
+    <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+    
+    <h3>Come cambiare il link del menu:</h3>
+    <ol>
+        <li>Vai nella sezione <strong>Issues</strong> del tuo repository GitHub.</li>
+        <li>Apri la prima Issue (quella contrassegnata con il numero 1).</li>
+        <li>Modifica il <strong>Titolo</strong> della Issue inserendo il nuovo URL del tuo menu (es. <code>https://tuosito.com/foto-menu.jpg</code>).</li>
+        <li>Salva. Il QR Code si aggiornerà istantaneamente per tutti i clienti!</li>
+    </ol>
+</div>
+
+<script>
+    // --- CONFIGURAZIONE REQUISITI GITHUB ---
+    // Inserisci qui il tuo username di GitHub e il nome del progetto (Repository)
+    const UTENTE_GITHUB = "IL_TUO_USERNAME_GITHUB";
+    const NOME_REPOSITORY = "IL_NOME_DEL_REPOSITORY";
+
+    // URL dell'API di GitHub per leggere il titolo della Issue #1
+    const GITHUB_API_URL = `https://api.github.com/repos/${UTENTE_GITHUB}/${NOME_REPOSITORY}/issues/1`;
+
+    const parametri = new URLSearchParams(window.location.search);
+
+    if (parametri.has('admin')) {
+        // MOSTRA IL PANNELLO CON IL QR CODE PER IL RISTORATORE
+        document.getElementById('vista-cliente').style.display = 'none';
+        document.getElementById('vista-admin').style.display = 'block';
+        
+        // Genera il QR code che punta alla pagina principale (quella che vedono i clienti)
+        const urlClienti = window.location.href.split('?')[0];
+        new QRCode(document.getElementById("qrcode"), {
+            text: urlClienti,
+            width: 200,
+            height: 200,
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    } else {
+        // REINDIRIZZAMENTO CLIENTE
+        fetch(GITHUB_API_URL)
+            .then(response => {
+                if (!response.ok) throw new Error("Issue non trovata");
+                return response.json();
+            })
+            .then(data => {
+                // Prende il link scritto nel TITOLO della Issue
+                const urlMenu = data.title.trim();
+                if (urlMenu.startsWith('http')) {
+                    window.location.href = urlMenu;
+                } else {
+                    document.getElementById('vista-cliente').innerHTML = "<h1>Errore</h1><p>Il link nel pannello GitHub non è valido.</p>";
+                }
+            })
+            .catch(error => {
+                console.error(error);
+                document.getElementById('vista-cliente').innerHTML = "<h1>Configurazione incompleta</h1><p>Assicurati di aver creato la Issue #1 su GitHub con il link del menu.</p>";
+            });
+    }
+</script>
+
+</body>
+</html>
